@@ -103,5 +103,5 @@ def send_message():
 # ===================================================
 # 🚀 SERVER START ENGINE (Sabse Aakhiri Mein)
 # ===================================================
-if __name__ == '__main__':
-    app.run(debug=True)
+# Yeh line sabse niche jodd do
+app.debug = True
