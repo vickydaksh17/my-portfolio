@@ -1,0 +1,641 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ user.name }} | Portfolio</title>
+    <!-- Tailwind CSS v4 -->
+    <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+    <style>
+        html { scroll-behavior: smooth; }
+        .zoomed-profile {
+            transform: scale(1.3) translateY(10px);
+            border-radius: 24px;
+            box-shadow: 0 25px 50px -12px rgba(16, 185, 129, 0.4);
+        }
+        .typing-cursor::after {
+            content: '|';
+            animation: blink 0.7s infinite;
+        }
+        @keyframes blink { 50% { opacity: 0; } }
+        
+        @keyframes float-slow {
+            0%, 100% { transform: translateY(0px) rotate(0deg); }
+            50% { transform: translateY(-8px) rotate(1deg); }
+        }
+        @keyframes float-medium {
+            0%, 100% { transform: translateY(0px) rotate(0deg); }
+            50% { transform: translateY(-12px) rotate(-1deg); }
+        }
+        .skill-float-1 { animation: float-slow 4s ease-in-out infinite; }
+        .skill-float-2 { animation: float-medium 5s ease-in-out infinite; }
+        .skill-float-3 { animation: float-slow 4.5s ease-in-out infinite 0.5s; }
+        
+        body.theme-dark { background-color: #09090b; color: #f4f4f5; }
+        body.theme-light { background-color: #fafafa; color: #18181b; }
+        
+        /* Particle Canvas Style */
+        #particleCanvas {
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            pointer-events: none; z-index: 0; opacity: 0.4;
+        }
+
+        .bg-card-glow { position: relative; }
+        .bg-card-glow::before {
+            content: ''; position: absolute; inset: 0; border-radius: 1rem; padding: 1.5px;
+            background: linear-gradient(to bottom right, rgba(16, 185, 129, 0.4), transparent, rgba(245, 158, 11, 0.2));
+            -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+            -webkit-mask-composite: xor; mask-composite: exclude; pointer-events: none;
+        }
+
+        .theme-dark .bg-card { background-color: rgba(24, 24, 27, 0.8); border-color: #27272a; color: #f4f4f5; backdrop-blur-md: 8px; }
+        .theme-light .bg-card { background-color: rgba(255, 255, 255, 0.8); border-color: #e4e4e7; color: #18181b; backdrop-blur-md: 8px; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05); }
+
+        .theme-dark .text-muted { color: #a1a1aa; }
+        .theme-light .text-muted { color: #52525b; }
+        .theme-dark .text-title { color: #ffffff; }
+        .theme-light .text-title { color: #09090b; }
+        
+        body, nav, section, div, span, h1, h2, h3, p, input, textarea {
+            transition: background-color 0.3s ease, border-color 0.3s ease, color 0.3s ease;
+        }
+        .touch-btn { -webkit-user-select: none; user-select: none; }
+
+        /* Achievement Popup Animation */
+        @keyframes slideInPop {
+            0% { transform: translateX(120%) scale(0.9); opacity: 0; }
+            50% { transform: translateX(-10px) scale(1.05); opacity: 1; }
+            100% { transform: translateX(0) scale(1); }
+        }
+        .achievement-card { animation: slideInPop 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards; }
+    </style>
+</head>
+<body class="theme-dark font-sans antialiased relative overflow-x-hidden">
+
+    <!-- BACKGROUND INTERACTIVE PARTICLES -->
+    <canvas id="particleCanvas"></canvas>
+
+    <!-- ACHIEVEMENT NOTIFICATION BOX -->
+    <div id="achievementContainer" class="fixed top-20 right-6 z-50 flex flex-col gap-3 pointer-events-none max-w-sm w-full px-4"></div>
+
+    <!-- Navbar -->
+    <nav id="navbar" class="sticky top-0 z-40 bg-zinc-900/80 backdrop-blur-md border-b border-zinc-800">
+        <div class="max-w-5xl mx-auto px-6 h-16 flex items-center justify-between">
+            <a href="#" class="text-xl font-bold bg-gradient-to-r from-emerald-400 to-teal-400 bg-clip-text text-transparent tracking-wider z-10">{{ user.name }}</a>
+            <div class="flex items-center gap-6 font-medium text-zinc-400 z-10" id="navLinks">
+                <a href="#about" class="hover:text-emerald-400 transition hidden sm:inline">About</a>
+                <a href="#skills" class="hover:text-emerald-400 transition hidden sm:inline">Skills</a>
+                <a href="#terminal" class="hover:text-emerald-400 transition hidden sm:inline">Console</a>
+                <a href="#projects" class="hover:text-emerald-400 transition">Projects</a>
+                <a href="#contact" class="hover:text-emerald-400 transition">Contact</a>
+                <button id="themeToggle" class="p-2 bg-zinc-800 hover:bg-zinc-700 rounded-xl transition cursor-pointer text-lg" title="Toggle Theme">🌙</button>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Hero Section -->
+    <section id="about" class="max-w-5xl mx-auto px-6 py-24 flex flex-col md:flex-row items-center gap-12 relative z-10">
+        <div class="w-48 h-48 md:w-64 md:h-64 flex-shrink-0 relative">
+            <img src="{{ url_for('static', filename='profile.jpg') }}" 
+                 alt="Duggu Sharma" 
+                 id="profileImg"
+                 class="w-full h-full object-cover rounded-full border-4 border-emerald-500 shadow-2xl shadow-emerald-500/20 cursor-pointer transition-all duration-300 ease-in-out z-10 relative">
+        </div>
+        <div class="flex-1 text-center md:text-left">
+            <div class="inline-flex items-center gap-2 px-3 py-1 bg-emerald-500/10 text-emerald-400 text-xs font-bold rounded-full mb-3 border border-emerald-500/20 shadow-sm" id="timeGreeting">
+                ⏱️ Checking time...
+            </div>
+            <h1 class="text-4xl md:text-6xl font-black text-title mb-2 tracking-tight">Hi, I'm <span class="bg-gradient-to-r from-emerald-400 via-teal-400 to-amber-200 bg-clip-text text-transparent">{{ user.name }}</span></h1>
+            
+            <div class="h-8 mb-4">
+                <p class="text-lg md:text-xl font-bold text-emerald-500 tracking-wide">
+                    I am a <span id="typingText" class="typing-cursor font-semibold"></span>
+                </p>
+            </div>
+
+            <p class="text-base md:text-lg text-muted leading-relaxed mb-6 max-w-xl">
+                I build clean, functional, and beautiful web applications. Turning complex problems into simple and elegant code is my superpower.
+            </p>
+            
+            <div class="flex flex-wrap justify-center md:justify-start gap-4 mb-8">
+                <a href="https://wa.me/917579809600?text=Hi%20Duggu,%20I%20saw%20your%20awesome%20portfolio!" target="_blank" class="inline-flex items-center justify-center px-5 py-2.5 font-semibold text-zinc-950 bg-emerald-400 hover:bg-emerald-300 transition rounded-xl shadow-lg shadow-emerald-500/20 text-sm">
+                    💬 WhatsApp Chat
+                </a>
+                <a href="tel:+917579809600" class="inline-flex items-center justify-center px-5 py-2.5 font-semibold text-title bg-zinc-800 border border-zinc-700 hover:bg-zinc-700 transition rounded-xl text-sm" id="callBtn">
+                    📞 Call Me
+                </a>
+            </div>
+
+            <div class="flex justify-center md:justify-start gap-6 text-sm font-medium text-zinc-400 border-t border-zinc-800/60 pt-4" id="socialLinks">
+                <a href="https://www.instagram.com/itz_duggu.sharma_10?igsh=MnRvZnhhenEyZ3Zi" target="_blank" class="hover:text-pink-500 transition">📸 Instagram</a>
+                <a href="https://github.com" target="_blank" class="hover:text-emerald-400 transition">💻 GitHub</a>
+            </div>
+        </div>
+    </section>
+
+    <!-- Skills Section -->
+    <section id="skills" class="bg-card py-20 border-y relative z-10">
+        <div class="max-w-5xl mx-auto px-6">
+            <h2 class="text-3xl font-bold text-title mb-2 text-center">My Tech Stack</h2>
+            <p class="text-zinc-500 text-center mb-10 text-sm">Technologies I work with to bring ideas to life.</p>
+            <div class="flex flex-wrap justify-center gap-6 max-w-3xl mx-auto">
+                <span class="skill-float-1 px-6 py-3 bg-zinc-900/40 border border-zinc-700/50 rounded-2xl font-bold tracking-wide shadow-md hover:border-emerald-500 hover:text-emerald-400 hover:scale-110 hover:!animation-none transition-all duration-300 cursor-default">🐍 Python</span>
+                <span class="skill-float-2 px-6 py-3 bg-zinc-900/40 border border-zinc-700/50 rounded-2xl font-bold tracking-wide shadow-md hover:border-emerald-500 hover:text-emerald-400 hover:scale-110 hover:!animation-none transition-all duration-300 cursor-default">🌶️ Flask</span>
+                <span class="skill-float-3 px-6 py-3 bg-zinc-900/40 border border-zinc-700/50 rounded-2xl font-bold tracking-wide shadow-md hover:border-emerald-500 hover:text-emerald-400 hover:scale-110 hover:!animation-none transition-all duration-300 cursor-default">🎨 Tailwind CSS</span>
+                <span class="skill-float-1 px-6 py-3 bg-zinc-900/40 border border-zinc-700/50 rounded-2xl font-bold tracking-wide shadow-md hover:border-emerald-500 hover:text-emerald-400 hover:scale-110 hover:!animation-none transition-all duration-300 cursor-default">⚡ JavaScript</span>
+                <span class="skill-float-2 px-6 py-3 bg-zinc-900/40 border border-zinc-700/50 rounded-2xl font-bold tracking-wide shadow-md hover:border-emerald-500 hover:text-emerald-400 hover:scale-110 hover:!animation-none transition-all duration-300 cursor-default">🛠️ HTML5 & CSS3</span>
+            </div>
+        </div>
+    </section>
+
+    <!-- LIVE CYBERPUNK SHELL TERMINAL SECTION -->
+    <section id="terminal" class="max-w-4xl mx-auto px-6 py-16 relative z-10">
+        <h2 class="text-2xl font-black text-title mb-1 text-center tracking-tight">💻 Cyber Shell Root Access</h2>
+        <p class="text-zinc-500 text-xs text-center mb-6">Type commands to trigger system matrices. Type <span class="text-emerald-400 font-bold">'help'</span> to load core protocols.</p>
+        
+        <div class="w-full bg-black/90 border border-zinc-800 rounded-2xl shadow-2xl p-4 font-mono text-xs text-emerald-400 min-h-[220px] flex flex-col justify-between">
+            <div id="terminalBody" class="overflow-y-auto space-y-1 max-h-[160px] pr-2">
+                <div class="text-zinc-500">// System Core initialized. Root status: Securing network...</div>
+                <div class="text-zinc-400">Duggu-OS v1.0.0 Mainframe Node Active.</div>
+            </div>
+            <div class="flex items-center gap-2 border-t border-zinc-900 pt-3 mt-2">
+                <span class="text-amber-400 font-bold">visitor@duggu-sharma:~$</span>
+                <input type="text" id="terminalInput" class="flex-1 bg-transparent text-emerald-300 outline-none border-none focus:ring-0" autocomplete="off" placeholder="Enter system command...">
+            </div>
+        </div>
+    </section>
+
+    <!-- Projects Section -->
+    <section id="projects" class="max-w-5xl mx-auto px-6 py-16 relative z-10">
+        <h2 class="text-3xl font-bold text-title mb-2 text-center">Featured Projects</h2>
+        <p class="text-zinc-500 text-center mb-12 text-sm">A glimpse of what I've built and what's brewing next.</p>
+        
+        <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6">
+            <!-- Project 1 -->
+            <div class="bg-card border rounded-2xl overflow-hidden group p-6 flex flex-col justify-between min-h-[350px]">
+                <div>
+                    <span class="text-xs font-bold text-emerald-400 uppercase tracking-wider">Web Application</span>
+                    <h3 class="text-lg font-bold text-title mt-1 mb-2 group-hover:text-emerald-400 transition">Flask Portfolio</h3>
+                    <p class="text-muted text-xs leading-relaxed">A dynamic portfolio website built using Python Flask, Tailwind CSS, and custom native AI chat widgets.</p>
+                </div>
+            </div>
+            
+            <!-- Project 2 -->
+            <div class="bg-card border rounded-2xl overflow-hidden group p-6 flex flex-col justify-between min-h-[350px]">
+                <div>
+                    <span class="text-xs font-bold text-amber-400 uppercase tracking-wider">Automation</span>
+                    <h3 class="text-lg font-bold text-title mt-1 mb-2 group-hover:text-amber-400 transition">Task Manager Bot</h3>
+                    <p class="text-muted text-xs leading-relaxed">A smart background automation engine built to map, log, and streamline data pipelines instantly.</p>
+                </div>
+            </div>
+            
+            <!-- LIVE PROJECT: ARCADE STATION -->
+            <div class="bg-card border-2 border-dashed border-emerald-500/30 rounded-2xl p-4 flex flex-col items-center justify-between text-center min-h-[350px] shadow-lg relative group hover:border-emerald-500/60 transition-all duration-300">
+                <div class="w-full">
+                    <span class="text-[9px] font-black uppercase tracking-widest text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded-full">Playable Game</span>
+                    <h3 class="text-xs font-bold text-title mt-1.5">🎮 Live Arcade Station</h3>
+                </div>
+
+                <div class="relative my-1">
+                    <canvas id="snakeCanvas" width="220" height="120" class="bg-zinc-950 border border-zinc-800 rounded-xl shadow-inner"></canvas>
+                    <div id="gameOverlay" class="absolute inset-0 bg-zinc-950/95 rounded-xl flex flex-col items-center justify-center hidden">
+                        <span class="text-red-500 font-extrabold text-xs uppercase tracking-wider mb-2">💥 Game Over</span>
+                        <button id="restartGameBtn" class="px-3 py-1 bg-emerald-500 text-zinc-950 rounded-lg text-[10px] font-black transition hover:bg-emerald-400 cursor-pointer">Play Again</button>
+                    </div>
+                </div>
+
+                <!-- Touch Buttons Pad -->
+                <div class="flex flex-col items-center gap-1 my-1 w-full max-w-[130px]">
+                    <button id="btnUp" class="touch-btn w-8 h-6 bg-zinc-800/80 active:bg-emerald-500 active:text-zinc-950 text-zinc-300 text-xs font-bold rounded-md flex items-center justify-center transition shadow border border-zinc-700/50 cursor-pointer">▲</button>
+                    <div class="flex gap-4 w-full justify-between">
+                        <button id="btnLeft" class="touch-btn w-8 h-6 bg-zinc-800/80 active:bg-emerald-500 active:text-zinc-950 text-zinc-300 text-xs font-bold rounded-md flex items-center justify-center transition shadow border border-zinc-700/50 cursor-pointer">◀</button>
+                        <button id="btnRight" class="touch-btn w-8 h-6 bg-zinc-800/80 active:bg-emerald-500 active:text-zinc-950 text-zinc-300 text-xs font-bold rounded-md flex items-center justify-center transition shadow border border-zinc-700/50 cursor-pointer">▶</button>
+                    </div>
+                    <button id="btnDown" class="touch-btn w-8 h-6 bg-zinc-800/80 active:bg-emerald-500 active:text-zinc-950 text-zinc-300 text-xs font-bold rounded-md flex items-center justify-center transition shadow border border-zinc-700/50 cursor-pointer">▼</button>
+                </div>
+
+                <div class="w-full flex justify-between items-center px-1 text-[10px] font-bold text-zinc-400 border-t border-zinc-800/60 pt-2">
+                    <span>Score: <span id="gameScore" class="text-emerald-400">0</span></span>
+                    <span>Hi-Score: <span id="highScore" class="text-amber-400">0</span></span>
+                </div>
+            </div>
+
+            <!-- FUTURE PROJECT 1 -->
+            <div class="bg-card border border-dashed border-zinc-800 rounded-2xl p-6 flex flex-col items-center justify-center text-center min-h-[350px] relative overflow-hidden group bg-card-glow bg-radial from-zinc-900 via-transparent">
+                <div class="absolute top-4 right-4">
+                    <span class="text-[9px] font-black uppercase tracking-widest text-amber-400 bg-amber-500/10 px-2 py-0.5 rounded-full animate-pulse">Coming Soon</span>
+                </div>
+                <div class="p-4 bg-zinc-900/60 border border-zinc-800 rounded-2xl mb-4 text-2xl group-hover:scale-110 group-hover:border-amber-500/30 transition duration-300">🕊️</div>
+                <h3 class="text-base font-bold text-title mb-2">Flappy Bird Room</h3>
+                <p class="text-zinc-500 text-xs leading-relaxed max-w-[180px]">Ek aur interactive HTML5 touch game pipeline mein hai. Stay tuned for ultra high score challenge!</p>
+            </div>
+
+            <!-- FUTURE PROJECT 2 -->
+            <div class="bg-card border border-dashed border-zinc-800 rounded-2xl p-6 flex flex-col items-center justify-center text-center min-h-[350px] relative overflow-hidden group bg-card-glow bg-radial from-zinc-900 via-transparent">
+                <div class="absolute top-4 right-4">
+                    <span class="text-[9px] font-black uppercase tracking-widest text-cyan-400 bg-cyan-500/10 px-2 py-0.5 rounded-full animate-pulse">Coming Soon</span>
+                </div>
+                <div class="p-4 bg-zinc-900/60 border border-zinc-800 rounded-2xl mb-4 text-2xl group-hover:scale-110 group-hover:border-cyan-500/30 transition duration-300">⚡</div>
+                <h3 class="text-base font-bold text-title mb-2">Matrix AI Visualizer</h3>
+                <p class="text-zinc-500 text-xs leading-relaxed max-w-[180px]">Kuchh naya aur behtareen data visualizer aur automatic scripts yahan bohot jald live dikhengi.</p>
+            </div>
+        </div>
+    </section>
+
+    <!-- Contact Section -->
+    <section id="contact" class="bg-card py-20 border-t relative z-10">
+        <div class="max-w-md mx-auto px-6 text-center">
+            <h2 class="text-3xl font-bold text-title mb-2">Get In Touch</h2>
+            <p class="text-zinc-500 mb-8 text-sm">Have a project in mind? Drop a message!</p>
+            <form action="/send_message" method="POST" class="space-y-4 text-left mb-8">
+                <!-- Name Box -->
+                <input type="text" name="name" required class="w-full px-4 py-3 bg-zinc-900/20 border border-zinc-700 text-title rounded-xl focus:outline-none focus:border-emerald-500 transition" placeholder="Your Name">
+                
+                <!-- Email Box (Naya) -->
+                <input type="email" name="email" required class="w-full px-4 py-3 bg-zinc-900/20 border border-zinc-700 text-title rounded-xl focus:outline-none focus:border-emerald-500 transition" placeholder="Your Email Address">
+                
+                <!-- Phone Box (Naya) -->
+                <input type="tel" name="phone" required class="w-full px-4 py-3 bg-zinc-900/20 border border-zinc-700 text-title rounded-xl focus:outline-none focus:border-emerald-500 transition" placeholder="Your Phone Number">
+                
+                <!-- Message Box -->
+                <textarea rows="3" name="message" required class="w-full px-4 py-3 bg-zinc-900/20 border border-zinc-700 text-title rounded-xl focus:outline-none focus:border-emerald-500 transition" placeholder="Type your message here..."></textarea>
+                
+                <!-- Submit Button -->
+                <button type="submit" class="w-full py-3 bg-gradient-to-r from-emerald-500 to-teal-500 text-zinc-950 font-bold rounded-xl hover:opacity-90 transition shadow-md cursor-pointer text-center">Send Message</button>
+            </form>
+        </div>
+    </section>
+
+    <!-- Floating Chat Widget Button -->
+    <div class="fixed bottom-6 right-6 z-50">
+        <button id="chatBtn" class="bg-gradient-to-r from-emerald-400 to-teal-500 text-zinc-950 p-4 rounded-full shadow-2xl hover:scale-110 transition duration-300 flex items-center justify-center font-bold text-xl cursor-pointer">💬</button>
+    </div>
+
+    <!-- Floating Chat Box Panel -->
+    <div id="chatBox" class="fixed bottom-24 right-6 w-80 h-96 bg-zinc-900 border border-zinc-800 rounded-2xl shadow-2xl z-50 hidden flex flex-col overflow-hidden text-zinc-100">
+        <div class="bg-gradient-to-r from-emerald-500 to-teal-600 p-4 text-zinc-950 font-bold flex justify-between items-center">
+            <span>🤖 Duggu's Voice AI</span>
+            <button id="closeChat" class="text-zinc-950 font-bold text-lg hover:text-white cursor-pointer">&times;</button>
+        </div>
+        <div id="chatMessages" class="flex-1 p-4 overflow-y-auto space-y-3 text-sm flex flex-col">
+            <div class="bg-zinc-800 text-zinc-200 p-2.5 rounded-xl rounded-tl-none self-start max-w-[85%]">Hi! Main Duggu ka voice assistant hoon. Mic daba kar kuch bhi boliye!</div>
+        </div>
+        <div class="p-3 bg-zinc-950 border-t border-zinc-800 flex gap-2 items-center">
+            <input type="text" id="chatInput" class="flex-1 bg-zinc-900 border border-zinc-800 text-white rounded-xl px-3 py-2 text-xs focus:outline-none focus:border-emerald-500" placeholder="Type or click mic to speak...">
+            <button id="voiceBtn" class="bg-zinc-800 hover:bg-zinc-700 text-white p-2 rounded-xl text-sm transition cursor-pointer flex items-center justify-center h-8 w-8" title="Speak through Mic">🎙️</button>
+            <button id="sendBtn" class="bg-emerald-400 text-zinc-950 px-3 py-2 rounded-xl text-xs font-bold cursor-pointer h-8">Send</button>
+        </div>
+    </div>
+
+    <!-- Luxury Footer -->
+    <footer class="bg-zinc-950 text-zinc-600 text-xs py-8 text-center border-t border-zinc-900 relative z-10" id="footer">
+        <p>&copy; 2026 {{ user.name }}. All rights reserved.</p>
+        <div class="mt-3 inline-flex items-center gap-1.5 px-3 py-1 bg-zinc-900 border border-zinc-800 rounded-full text-zinc-400 font-medium select-none shadow-inner">
+            👁️ Total Portfolio Views: <span class="text-emerald-400 font-extrabold ml-0.5 tracking-wide">{{ total_visitors }}</span>
+        </div>
+    </footer>
+
+    <!-- System JavaScript codes -->
+    <script>
+        // Real SFX Engine links 
+        const clickSound = new Audio('https://assets.mixkit.co/active_storage/sfx/2568/2568-84.wav');
+        clickSound.volume = 0.15;
+        const achieveSound = new Audio('https://assets.mixkit.co/active_storage/sfx/1435/1435-84.wav');
+        achieveSound.volume = 0.3;
+
+        // 1. DYNAMIC PARTICLE MATRIX BACKGROUND ENGINE
+        const pCanvas = document.getElementById('particleCanvas');
+        const pCtx = pCanvas.getContext('2d');
+        let particles = [];
+        let mouse = { x: null, y: null, radius: 100 };
+
+        function initParticles() {
+            pCanvas.width = window.innerWidth;
+            pCanvas.height = window.innerHeight;
+            particles = [];
+            let count = Math.min(Math.floor(window.innerWidth / 15), 70);
+            for (let i = 0; i < count; i++) {
+                particles.push({
+                    x: Math.random() * pCanvas.width,
+                    y: Math.random() * pCanvas.height,
+                    vx: (Math.random() - 0.5) * 0.6,
+                    vy: (Math.random() - 0.5) * 0.6,
+                    radius: Math.random() * 2 + 1
+                });
+            }
+        }
+
+        function animateParticles() {
+            pCtx.clearRect(0, 0, pCanvas.width, pCanvas.height);
+            particles.forEach(p => {
+                p.x += p.vx; p.y += p.vy;
+                if (p.x < 0 || p.x > pCanvas.width) p.vx *= -1;
+                if (p.y < 0 || p.y > pCanvas.height) p.vy *= -1;
+
+                // Mouse interaction repulsion
+                if (mouse.x !== null && mouse.y !== null) {
+                    let dx = p.x - mouse.x;
+                    let dy = p.y - mouse.y;
+                    let dist = Math.sqrt(dx * dx + dy * dy);
+                    if (dist < mouse.radius) {
+                        let force = (mouse.radius - dist) / mouse.radius;
+                        p.x += (dx / dist) * force * 3;
+                        p.y += (dy / dist) * force * 3;
+                    }
+                }
+
+                pCtx.fillStyle = document.body.classList.contains('theme-light') ? 'rgba(16, 185, 129, 0.4)' : 'rgba(52, 211, 153, 0.5)';
+                pCtx.beginPath();
+                pCtx.arc(p.x, p.y, p.radius, 0, Math.PI * 2);
+                pCtx.fill();
+            });
+
+            // Draw link lines between close particles
+            for (let i = 0; i < particles.length; i++) {
+                for (let j = i + 1; j < particles.length; j++) {
+                    let dx = particles[i].x - particles[j].x;
+                    let dy = particles[i].y - particles[j].y;
+                    let dist = Math.sqrt(dx * dx + dy * dy);
+                    if (dist < 90) {
+                        pCtx.strokeStyle = document.body.classList.contains('theme-light') ? `rgba(16, 185, 129, ${0.15 - dist/90})` : `rgba(16, 185, 129, ${0.25 - dist/90})`;
+                        pCtx.lineWidth = 0.5;
+                        pCtx.beginPath(); pCtx.moveTo(particles[i].x, particles[i].y); pCtx.lineTo(particles[j].x, particles[j].y); pCtx.stroke();
+                    }
+                }
+            }
+            requestAnimationFrame(animateParticles);
+        }
+
+        window.addEventListener('mousemove', (e) => { mouse.x = e.clientX; mouse.y = e.clientY; });
+        window.addEventListener('mouseout', () => { mouse.x = null; mouse.y = null; });
+        window.addEventListener('resize', initParticles);
+        initParticles(); animateParticles();
+
+        // 2. CYBERPUNK COMMAND LINE TERMINAL ENGINE
+        const termInput = document.getElementById('terminalInput');
+        const termBody = document.getElementById('terminalBody');
+
+        termInput.addEventListener('keydown', (e) => {
+            clickSound.currentTime = 0; clickSound.play().catch(()=>{}); // Click sound trigger
+            if (e.key === 'Enter') {
+                const cmd = termInput.value.trim();
+                termInput.value = '';
+                if (!cmd) return;
+
+                const line = document.createElement('div');
+                line.className = "text-amber-400 mt-1";
+                line.innerHTML = `<span>$ ${cmd}</span>`;
+                termBody.appendChild(line);
+
+                const response = document.createElement('div');
+                response.className = "text-zinc-300 pl-2 border-l border-zinc-800 my-0.5";
+                
+                const cleanCmd = cmd.toLowerCase();
+                if (cleanCmd === 'help') {
+                    response.innerHTML = "<span class='text-emerald-400 font-bold'>Available Matrix Protocols:</span><br>• <span class='text-teal-400'>about</span> - System Dev Intel<br>• <span class='text-teal-400'>skills</span> - Core Tech Stack Arrays<br>• <span class='text-teal-400'>secret</span> - Unlock classified data stream<br>• <span class='text-teal-400'>clear</span> - Purge console terminal logs";
+                } else if (cleanCmd === 'about') {
+                    response.innerText = "Dev Node ID: Duggu Sharma. Role: Full Stack Python Developer & Creator of automated AI instances.";
+                } else if (cleanCmd === 'skills') {
+                    response.innerText = "Python3, Flask Micro-Engine, Tailwind CSS v4, Vanilla Javascript (ES6), RESTful APIs Architecture.";
+                } else if (cleanCmd === 'secret') {
+                    response.className = "text-amber-400 pl-2 border-l border-amber-500 animate-pulse";
+                    response.innerText = "⚡ CLASSIFIED ACCESS GRANTED: Duggu is coding a secret AI system that will automate server workflows. System load efficiency: 99.8%.";
+                    triggerAchievement("Classified Hacker", "Secret System Log access kiya!");
+                } else if (cleanCmd === 'clear') {
+                    termBody.innerHTML = '';
+                    response.innerText = "Mainframe buffer cleared.";
+                } else {
+                    response.className = "text-red-400 pl-2";
+                    response.innerText = `Command execution error: '${cmd}' not recognized. Type 'help' for instructions.`;
+                }
+
+                termBody.appendChild(response);
+                termBody.scrollTop = termBody.scrollHeight;
+            }
+        });
+
+        // 3. XBOX/PLAYSTATION STYLE ACHIEVEMENT SYSTEM POPUP
+        let unlockedAchievements = [];
+        function triggerAchievement(title, desc) {
+            if (unlockedAchievements.includes(title)) return;
+            unlockedAchievements.push(title);
+
+            achieveSound.currentTime = 0; achieveSound.play().catch(()=>{});
+
+            const container = document.getElementById('achievementContainer');
+            const card = document.createElement('div');
+            card.className = "achievement-card w-full bg-zinc-950/95 border-2 border-amber-400 text-white rounded-2xl p-4 shadow-2xl flex items-center gap-3 backdrop-blur-lg select-none";
+            card.innerHTML = `
+                <div class="text-3xl bg-amber-400/20 p-2 border border-amber-400/40 rounded-xl">🏆</div>
+                <div class="flex-1">
+                    <div class="text-[9px] uppercase font-black text-amber-400 tracking-widest">Achievement Unlocked</div>
+                    <div class="text-sm font-black text-zinc-100">${title}</div>
+                    <div class="text-xs text-zinc-400">${desc}</div>
+                </div>
+            `;
+            container.appendChild(card);
+            setTimeout(() => {
+                card.style.transition = "all 0.5s ease-in-out";
+                card.style.transform = "translateX(120%)"; card.style.opacity = "0";
+                setTimeout(() => card.remove(), 500);
+            }, 4500);
+        }
+
+        // Time-Based Greeting Logic
+        function updateGreeting() {
+            const greetingElement = document.getElementById('timeGreeting');
+            const hour = new Date().getHours();
+            let message = "";
+            if (hour >= 5 && hour < 12) message = "☀️ Good Morning! Fresh code brewing...";
+            else if (hour >= 12 && hour < 17) message = "🚀 Good Afternoon! Crushing bugs right now.";
+            else if (hour >= 17 && hour < 22) message = "🌆 Good Evening! Welcome to my digital space.";
+            else message = "🦉 Burning the midnight oil? Coding mode fully active!";
+            greetingElement.innerText = message;
+        }
+        document.addEventListener("DOMContentLoaded", updateGreeting);
+
+        const themeToggleBtn = document.getElementById('themeToggle');
+        const body = document.body;
+        const navbar = document.getElementById('navbar');
+        const navLinks = document.getElementById('navLinks');
+        const callBtn = document.getElementById('callBtn');
+        const formName = document.getElementById('formName');
+        const formText = document.getElementById('formText');
+        const footer = document.getElementById('footer');
+
+        themeToggleBtn.addEventListener('click', () => {
+            if (body.classList.contains('theme-dark')) {
+                body.classList.remove('theme-dark'); body.classList.add('theme-light');
+                themeToggleBtn.innerText = '☀️';
+                navbar.className = "sticky top-0 z-40 bg-white/90 backdrop-blur-md border-b border-zinc-200";
+                navLinks.className = "flex items-center gap-6 font-medium text-zinc-600 z-10";
+                themeToggleBtn.className = "p-2 bg-zinc-200 hover:bg-zinc-300 rounded-xl transition cursor-pointer text-lg";
+                callBtn.className = "inline-flex items-center justify-center px-5 py-2.5 font-semibold text-zinc-800 bg-zinc-200 border border-zinc-300 hover:bg-zinc-300 transition rounded-xl text-sm";
+                formName.className = "w-full px-4 py-3 bg-white border border-zinc-300 text-zinc-900 rounded-xl focus:outline-none focus:border-emerald-500 transition";
+                formText.className = "w-full px-4 py-3 bg-white border border-zinc-300 text-zinc-900 rounded-xl focus:outline-none focus:border-emerald-500 transition";
+                footer.className = "bg-zinc-100 text-zinc-500 text-xs py-8 text-center border-t border-zinc-200 relative z-10";
+            } else {
+                body.classList.remove('theme-light'); body.classList.add('theme-dark');
+                themeToggleBtn.innerText = '🌙';
+                navbar.className = "sticky top-0 z-40 bg-zinc-900/80 backdrop-blur-md border-b border-zinc-800";
+                navLinks.className = "flex items-center gap-6 font-medium text-zinc-400 z-10";
+                themeToggleBtn.className = "p-2 bg-zinc-800 hover:bg-zinc-700 rounded-xl transition cursor-pointer text-lg";
+                callBtn.className = "inline-flex items-center justify-center px-5 py-2.5 font-semibold text-white bg-zinc-800 border border-zinc-700 hover:bg-zinc-700 transition rounded-xl text-sm";
+                formName.className = "w-full px-4 py-3 bg-zinc-950 border border-zinc-800 text-white rounded-xl focus:outline-none focus:border-emerald-500 transition";
+                formText.className = "w-full px-4 py-3 bg-zinc-950 border border-zinc-800 text-white rounded-xl focus:outline-none focus:border-emerald-500 transition";
+                footer.className = "bg-zinc-950 text-zinc-600 text-xs py-8 text-center border-t border-zinc-900 relative z-10";
+            }
+        });
+
+        const words = ["Python Developer.", "Flask Specialist.", "Web Innovator.", "Tech Problem Solver."];
+        let wordIndex = 0, charIndex = 0, isDeleting = false;
+        const targetElement = document.getElementById("typingText");
+
+        function typeEffect() {
+            const currentWord = words[wordIndex];
+            if (isDeleting) { targetElement.innerText = currentWord.substring(0, charIndex - 1); charIndex--; } 
+            else { targetElement.innerText = currentWord.substring(0, charIndex + 1); charIndex++; }
+            if (!isDeleting && charIndex === currentWord.length) { setTimeout(() => isDeleting = true, 1500); } 
+            else if (isDeleting && charIndex === 0) { isDeleting = false; wordIndex = (wordIndex + 1) % words.length; }
+            setTimeout(typeEffect, isDeleting ? 50 : 100);
+        }
+        document.addEventListener("DOMContentLoaded", typeEffect);
+
+        const profileImg = document.getElementById('profileImg');
+        profileImg.addEventListener('click', function(e) { profileImg.classList.toggle('zoomed-profile'); e.stopPropagation(); });
+        document.addEventListener('click', function() { profileImg.classList.remove('zoomed-profile'); });
+
+        // Voice Bot Engine
+        const chatBtn = document.getElementById('chatBtn'); const chatBox = document.getElementById('chatBox');
+        const closeChat = document.getElementById('closeChat'); const chatInput = document.getElementById('chatInput');
+        const sendBtn = document.getElementById('sendBtn'); const voiceBtn = document.getElementById('voiceBtn');
+        const chatMessages = document.getElementById('chatMessages');
+
+        chatBtn.addEventListener('click', () => chatBox.classList.toggle('hidden'));
+        closeChat.addEventListener('click', () => chatBox.classList.add('hidden'));
+
+        function speakResponse(text) {
+            if ('speechSynthesis' in window) {
+                window.speechSynthesis.cancel();
+                const utterance = new SpeechSynthesisUtterance(text);
+                window.speechSynthesis.speak(utterance);
+            }
+        }
+
+        function sendMessage(forcedText = null) {
+            const msgText = forcedText ? forcedText : chatInput.value.trim();
+            if (!msgText) return;
+
+            const userDiv = document.createElement('div');
+            userDiv.className = "bg-emerald-500 text-zinc-950 p-2.5 rounded-xl rounded-tr-none self-end max-w-[85%]";
+            userDiv.innerText = msgText; chatMessages.appendChild(userDiv);
+            chatInput.value = ''; chatMessages.scrollTop = chatMessages.scrollHeight;
+
+            setTimeout(() => {
+                const botDiv = document.createElement('div');
+                botDiv.className = "bg-zinc-800 text-zinc-200 p-2.5 rounded-xl rounded-tl-none self-start max-w-[85%]";
+                const cleanText = msgText.toLowerCase();
+                let reply = "Awesome input! Duggu will get back to your query very soon.";
+
+                if(cleanText.includes('hi') || cleanText.includes('hello')) reply = "Hey there! Welcome to Duggu's voice terminal.";
+                else if(cleanText.includes('project')) reply = "Duggu is cooking dynamic web interfaces, games, and automation routines.";
+                else if(cleanText.includes('skills')) reply = "Duggu works with Python, Flask, Tailwind CSS, and JavaScript.";
+
+                botDiv.innerText = reply; chatMessages.appendChild(botDiv);
+                chatMessages.scrollTop = chatMessages.scrollHeight; speakResponse(reply);
+            }, 800);
+        }
+        sendBtn.addEventListener('click', () => sendMessage());
+        chatInput.addEventListener('keypress', (e) => { if (e.key === 'Enter') sendMessage(); });
+
+        if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
+            const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+            const recognition = new SpeechRecognition();
+            recognition.onstart = () => { voiceBtn.innerText = "🛑"; voiceBtn.className = "bg-red-500 animate-pulse text-white p-2 rounded-xl text-sm h-8 w-8 flex items-center justify-center"; };
+            recognition.onend = () => { voiceBtn.innerText = "🎙️"; voiceBtn.className = "bg-zinc-800 text-white p-2 rounded-xl text-sm h-8 w-8 flex items-center justify-center"; };
+            recognition.onresult = (e) => { sendMessage(e.results[0][0].transcript); };
+            voiceBtn.addEventListener('click', () => { if (voiceBtn.innerText === "🛑") recognition.stop(); else recognition.start(); });
+        }
+
+        // ==========================================
+        // ARCADE SNAKE GAME ENGINE + ACHIEVEMENT POPUPS
+        // ==========================================
+        const gameOverlay = document.getElementById('gameOverlay');
+        const restartGameBtn = document.getElementById('restartGameBtn');
+        const canvas = document.getElementById('snakeCanvas'); const ctx = canvas.getContext('2d');
+        const scoreElement = document.getElementById('gameScore'); const highScoreElement = document.getElementById('highScore');
+
+        const btnUp = document.getElementById('btnUp'); const btnDown = document.getElementById('btnDown');
+        const btnLeft = document.getElementById('btnLeft'); const btnRight = document.getElementById('btnRight');
+
+        let grid = 10; let count = 0; let score = 0; let highScore = 0; let gameLoopId; let baseSpeed = 8;
+        let snake = { x: 40, y: 40, dx: grid, dy: 0, cells: [], maxCells: 4 };
+        let apple = { x: 120, y: 60 };
+
+        function getRandomInt(min, max) { return Math.floor(Math.random() * (max - min)) + min; }
+        function resetGame() {
+            snake.x = 40; snake.y = 40; snake.cells = []; snake.maxCells = 4; snake.dx = grid; snake.dy = 0;
+            score = 0; scoreElement.innerText = score; gameOverlay.classList.add('hidden');
+            apple.x = getRandomInt(0, canvas.width / grid) * grid; apple.y = getRandomInt(0, canvas.height / grid) * grid;
+        }
+
+        function loop() {
+            gameLoopId = requestAnimationFrame(loop);
+            if (++count < baseSpeed) { return; } count = 0;
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            ctx.fillStyle = '#09090b'; ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            snake.x += snake.dx; snake.y += snake.dy;
+            if (snake.x < 0) snake.x = canvas.width - grid; else if (snake.x >= canvas.width) snake.x = 0;
+            if (snake.y < 0) snake.y = canvas.height - grid; else if (snake.y >= canvas.height) snake.y = 0;
+
+            snake.cells.unshift({x: snake.x, y: snake.y});
+            if (snake.cells.length > snake.maxCells) { snake.cells.pop(); }
+
+            ctx.fillStyle = '#f87171'; ctx.fillRect(apple.x, apple.y, grid - 1, grid - 1);
+
+            snake.cells.forEach(function(cell, index) {
+                ctx.fillStyle = index === 0 ? '#10b981' : '#34d399';
+                ctx.fillRect(cell.x, cell.y, grid - 1, grid - 1);
+
+                if (cell.x === apple.x && cell.y === apple.y) {
+                    snake.maxCells++; score += 10; scoreElement.innerText = score;
+                    
+                    // CHECK SCORE MILESTONES FOR ACHIEVEMENTS
+                    if(score === 20) triggerAchievement("Apprentice Eater", "Snake Game me 20 points banaye!");
+                    if(score === 50) triggerAchievement("Snake Elite", "Bohot badhiya! 50 points complete!");
+                    if(score === 100) triggerAchievement("Arcade Overlord 👑", "Unstoppable! 100+ Highscore master!");
+
+                    if(score > highScore) { highScore = score; highScoreElement.innerText = highScore; }
+                    apple.x = getRandomInt(0, canvas.width / grid) * grid;
+                    apple.y = getRandomInt(0, canvas.height / grid) * grid;
+                }
+
+                for (let i = index + 1; i < snake.cells.length; i++) {
+                    if (cell.x === snake.cells[i].x && cell.y === snake.cells[i].y) {
+                        cancelAnimationFrame(gameLoopId); gameLoopId = null; gameOverlay.classList.remove('hidden');
+                    }
+                }
+            });
+        }
+
+        function handleControls(e) {
+            if([37, 38, 39, 40].includes(e.keyCode)) { e.preventDefault(); }
+            if (e.which === 37 && snake.dx === 0) { snake.dx = -grid; snake.dy = 0; }
+            else if (e.which === 38 && snake.dy === 0) { snake.dy = -grid; snake.dx = 0; }
+            else if (e.which === 39 && snake.dx === 0) { snake.dx = grid; snake.dy = 0; }
+            else if (e.which === 40 && snake.dy === 0) { snake.dy = grid; snake.dx = 0; }
+        }
+
+        btnUp.addEventListener('click', () => { if(snake.dy === 0) { snake.dy = -grid; snake.dx = 0; } });
+        btnDown.addEventListener('click', () => { if(snake.dy === 0) { snake.dy = grid; snake.dx = 0; } });
+        btnLeft.addEventListener('click', () => { if(snake.dx === 0) { snake.dx = -grid; snake.dy = 0; } });
+        btnRight.addEventListener('click', () => { if(snake.dx === 0) { snake.dx = grid; snake.dy = 0; } });
+
+        document.addEventListener('keydown', handleControls);
+        window.addEventListener('load', () => { gameLoopId = requestAnimationFrame(loop); });
+        restartGameBtn.addEventListener('click', () => { resetGame(); if (!gameLoopId) { gameLoopId = requestAnimationFrame(loop); } });
+    </script>
+</body>
+</html>
